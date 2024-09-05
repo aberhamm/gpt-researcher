@@ -8,6 +8,8 @@ from gpt_researcher.scraper import (
     BeautifulSoupScraper,
     PyMuPDFScraper,
     WebBaseLoaderScraper,
+    ScrapingBeeScraper,
+    ZenRowsScraper,
 )
 
 
@@ -17,6 +19,7 @@ class Scraper:
     """
 
     def __init__(self, urls, user_agent, scraper):
+        print(f"Scraper: {scraper}")
         """
         Initialize the Scraper class.
         Args:
@@ -32,7 +35,7 @@ class Scraper:
         Extracts the content from the links
         """
         partial_extract = partial(self.extract_data_from_link, session=self.session)
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             contents = executor.map(partial_extract, self.urls)
         res = [content for content in contents if content["raw_content"] is not None]
         return res
@@ -75,6 +78,8 @@ class Scraper:
             "arxiv": ArxivScraper,
             "bs": BeautifulSoupScraper,
             "web_base_loader": WebBaseLoaderScraper,
+            "scraping_bee": ScrapingBeeScraper,
+            "zenrows": ZenRowsScraper,
         }
 
         scraper_key = None

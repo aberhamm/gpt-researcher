@@ -30,6 +30,7 @@ def generate_search_queries_prompt(
 
     return (
         f'Write {max_iterations} google search queries to search online that form an objective opinion from the following task: "{task}"'
+        f"One of the queries must include Reddit, Quora, or a similar platform."
         f'You must respond with a list of strings in the following format: ["query 1", "query 2", "query 3"].\n'
         f"The response should contain ONLY the list."
     )
@@ -54,7 +55,7 @@ def generate_report_prompt(
         reference_prompt = f"""
 You MUST write all used source urls at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each.
 Every url should be hyperlinked: [url website](url)
-Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report: 
+Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report:
 
 eg: Author, A. A. (Year, Month Date). Title of web page. Website Name. [url website](url)
 """
@@ -69,7 +70,7 @@ You MUST write all used source document names at the end of the report as refere
 Information: "{context}"
 ---
 Using the above information, answer the following query or task: "{question}" in a detailed report --
-The report should focus on the answer to the query, should be well structured, informative, 
+The report should focus on the answer to the query, should be well structured, informative,
 in-depth, and comprehensive, with facts and numbers if available and a minimum of {total_words} words.
 You should strive to write the report as long as you can using all relevant and necessary information provided.
 
@@ -88,7 +89,12 @@ Assume that the current date is {date.today()}.
 
 
 def generate_resource_report_prompt(
-    question, context, report_source: str, report_format="apa", tone=None, total_words=1000
+    question,
+    context,
+    report_source: str,
+    report_format="apa",
+    tone=None,
+    total_words=1000,
 ):
     """Generates the resource report prompt for the given question and research summary.
 
@@ -168,14 +174,14 @@ The server is determined by the field of the topic and the specific name of the 
 
 examples:
 task: "should I invest in apple stocks?"
-response: 
+response:
 {
     "server": "💰 Finance Agent",
     "agent_role_prompt: "You are a seasoned finance analyst AI assistant. Your primary goal is to compose comprehensive, astute, impartial, and methodically arranged financial reports based on provided data and trends."
 }
 task: "could reselling sneakers become profitable?"
-response: 
-{ 
+response:
+{
     "server":  "📈 Business Analyst Agent",
     "agent_role_prompt": "You are an experienced AI business analyst assistant. Your main objective is to produce comprehensive, insightful, impartial, and systematically structured business reports based on provided business data, market trends, and strategic analysis."
 }
@@ -217,7 +223,7 @@ and research data:
 
 {data}
 
-- Construct a list of subtopics which indicate the headers of a report document to be generated on the task. 
+- Construct a list of subtopics which indicate the headers of a report document to be generated on the task.
 - These are a possible list of subtopics : {subtopics}.
 - There should NOT be any duplicate subtopics.
 - Limit the number of subtopics to a maximum of {max_subtopics}
@@ -277,7 +283,7 @@ You must limit the number of subsections to a maximum of {max_subsections}.
 - You MUST include markdown hyperlinks to relevant source URLs wherever referenced in the report, for example:
 
     ### Section Header
-    
+
     This is a sample text. ([url website](url))
 
 - Use H2 for the main subtopic header (##) and H3 for subsections (###).
@@ -303,10 +309,7 @@ Assume the current date is {datetime.now(timezone.utc).strftime('%B %d, %Y')} if
 
 
 def generate_draft_titles_prompt(
-    current_subtopic: str,
-    main_topic: str,
-    context: str,
-    max_subsections: int = 5
+    current_subtopic: str, main_topic: str, context: str, max_subsections: int = 5
 ) -> str:
     return f"""
 "Context":
@@ -335,8 +338,9 @@ Provide the draft headers in a list format using markdown syntax, for example:
 - Focus solely on creating headers, not content.
 """
 
+
 def generate_report_introduction(question: str, research_summary: str = "") -> str:
-    return f"""{research_summary}\n 
+    return f"""{research_summary}\n
 Using the above latest information, Prepare a detailed report introduction on the topic -- {question}.
 - The introduction should be succinct, well-structured, informative with markdown syntax.
 - As this introduction will be part of a larger report, do NOT include any other sections, which are generally present in a report.
