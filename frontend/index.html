@@ -181,17 +181,6 @@
             agentChoices[0].style.display = 'none';
         });
 
-        const tagsInput = document.getElementById('tags-input');
-        const input = document.getElementById('custom_source');
-
-        input.addEventListener('keypress', function (e) {
-            if ((e.key === 'Enter' || e.key === ",") && input.value !== '') {
-                e.preventDefault();
-                GPTResearcher.addTag(input.value);
-                input.value = '';
-            }
-        });
-
 </script>
 </body>
 
