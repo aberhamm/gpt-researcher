@@ -19,7 +19,7 @@ body {
     color: #fff;
     line-height: 1.6;
     background-size: 200% 200%;
-    background-image: linear-gradient(45deg, #151A2D, #2D284D, #151A2D);
+    background-image: linear-gradient(45deg, #151a2d, #2d284d, #151a2d);
     animation: gradientBG 10s ease infinite;
 }
 
@@ -46,26 +46,23 @@ body {
 
 .container {
     padding: 20px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    transition: all .3s ease-in-out;
     margin: auto auto 180px auto;
 }
 
-.container:hover {
-    transform: scale(1.01);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-}
-
-input, select, #output, #reportContainer {
+input,
+select,
+#output,
+#reportContainer {
     background-color: rgba(255, 255, 255, 0.1);
     border: none;
     color: #fff;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
 }
 
-input:hover, input:focus, select:hover, select:focus {
+input:hover,
+input:focus,
+select:hover,
+select:focus {
     background-color: #dfe4ea;
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -75,13 +72,13 @@ input:hover, input:focus, select:hover, select:focus {
 .btn-primary {
     background: linear-gradient(to right, #0062cc, #007bff);
     border: none;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
 }
 
 .btn-secondary {
     background: linear-gradient(to right, #6c757d, #6c757d);
     border: none;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
 }
 
 .btn:hover {
@@ -101,7 +98,7 @@ footer {
     left: 0;
     bottom: 0;
     width: 100%;
-    background: linear-gradient(to right, #151A2D, #111827);
+    background: linear-gradient(to right, #151a2d, #111827);
     color: white;
     text-align: center;
     padding: 10px 0;
@@ -130,24 +127,15 @@ footer {
 }
 
 #reportContainer {
-    font-family: 'Georgia', 'Times New Roman', Times, "Courier New", serif;
+    font-family: 'Georgia', 'Times New Roman', Times, 'Courier New', serif;
     font-size: 18px !important;
     background-color: rgba(255, 255, 255, 0.1);
-    font-family: 'Times New Roman', Times, "Courier New", serif;
+    font-family: 'Times New Roman', Times, 'Courier New', serif;
     border: none;
     color: #fff;
-    transition: all .3s ease-in-out;
+    transition: all 0.3s ease-in-out;
     padding: 25px;
     border-radius: 12px;
-}
-
-.tags-input {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    border: 1px solid #ccc;
-    padding: 5px;
-    border-radius: 5px;
 }
 
 .tag {
