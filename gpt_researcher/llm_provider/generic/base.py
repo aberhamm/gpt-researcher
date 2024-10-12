@@ -1,7 +1,7 @@
 import importlib
 from typing import Any
 from colorama import Fore, Style, init
-
+import os
 
 class GenericLLMProvider:
 
@@ -48,8 +48,8 @@ class GenericLLMProvider:
         elif provider == "ollama":
             _check_pkg("langchain_community")
             from langchain_community.chat_models import ChatOllama
-
-            llm = ChatOllama(**kwargs)
+            
+            llm = ChatOllama(base_url=os.environ["OLLAMA_BASE_URL"], **kwargs)
         elif provider == "together":
             _check_pkg("langchain_together")
             from langchain_together import ChatTogether
@@ -111,13 +111,19 @@ class GenericLLMProvider:
                 response += content
                 paragraph += content
                 if "\n" in paragraph:
-                    if websocket is not None:
-                        await websocket.send_json({"type": "report", "output": paragraph})
-                    else:
-                        print(f"{Fore.GREEN}{paragraph}{Style.RESET_ALL}")
+                    await self._send_output(paragraph, websocket)
                     paragraph = ""
 
+        if paragraph:
+            await self._send_output(paragraph, websocket)
+
         return response
+
+    async def _send_output(self, content, websocket=None):
+        if websocket is not None:
+            await websocket.send_json({"type": "report", "output": content})
+        else:
+            print(f"{Fore.GREEN}{content}{Style.RESET_ALL}")
 
 
 
