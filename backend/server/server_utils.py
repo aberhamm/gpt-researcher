@@ -3,7 +3,7 @@ import os
 import re
 import time
 import shutil
-from typing import Dict, List
+from typing import Dict, List, Any
 from fastapi.responses import JSONResponse
 from gpt_researcher.document.document import DocumentLoader
 # Add this import
@@ -38,6 +38,10 @@ async def handle_human_feedback(data: str):
     print(f"Received human feedback: {feedback_data}")
     # TODO: Add logic to forward the feedback to the appropriate agent or update the research state
 
+async def handle_chat(websocket, data: str, manager):
+    json_data = json.loads(data[4:])
+    print(f"Received chat message: {json_data.get('message')}")
+    await manager.chat(json_data.get("message"), websocket)
 
 async def generate_report_files(report: str, filename: str) -> Dict[str, str]:
     pdf_path = await write_md_to_pdf(report, filename)
@@ -79,7 +83,7 @@ def update_environment_variables(config: Dict[str, str]):
 
 
 async def handle_file_upload(file, DOC_PATH: str) -> Dict[str, str]:
-    file_path = os.path.join(DOC_PATH, file.filename)
+    file_path = os.path.join(DOC_PATH, os.path.basename(file.filename))
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     print(f"File uploaded to {file_path}")
@@ -91,7 +95,7 @@ async def handle_file_upload(file, DOC_PATH: str) -> Dict[str, str]:
 
 
 async def handle_file_deletion(filename: str, DOC_PATH: str) -> JSONResponse:
-    file_path = os.path.join(DOC_PATH, filename)
+    file_path = os.path.join(DOC_PATH, os.path.basename(filename))
     if os.path.exists(file_path):
         os.remove(file_path)
         print(f"File deleted: {file_path}")
@@ -101,7 +105,7 @@ async def handle_file_deletion(filename: str, DOC_PATH: str) -> JSONResponse:
         return JSONResponse(status_code=404, content={"message": "File not found"})
 
 
-async def execute_multi_agents(manager) -> Dict[str, str]:
+async def execute_multi_agents(manager) -> Any:
     websocket = manager.active_connections[0] if manager.active_connections else None
     if websocket:
         report = await run_research_task("Is AI in a hype cycle?", websocket, stream_output)
@@ -117,6 +121,8 @@ async def handle_websocket_communication(websocket, manager):
             await handle_start_command(websocket, data, manager)
         elif data.startswith("human_feedback"):
             await handle_human_feedback(data)
+        elif data.startswith("chat"):
+            await handle_chat(websocket, data, manager)
         else:
             print("Error: Unknown command or not enough parameters provided.")
 

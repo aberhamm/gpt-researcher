@@ -1,11 +1,11 @@
 import Image from "next/image";
 import { FC } from "react";
-import InputArea from "./InputArea";
+import InputArea from "./ResearchBlocks/elements/InputArea";
 
 type THeroProps = {
   promptValue: string;
   setPromptValue: React.Dispatch<React.SetStateAction<string>>;
-  handleDisplayResult: () => void;
+  handleDisplayResult: (query : string) => void;
 };
 
 const Hero: FC<THeroProps> = ({
@@ -19,33 +19,31 @@ const Hero: FC<THeroProps> = ({
 
   return (
     <div>
-
       <div className="flex flex-col items-center justify-center">
         <div className="landing flex flex-col items-center">
-            <h1 className="text-4xl font-extrabold text-center lg:text-7xl">
-              Say Goodbye to <br />
-              <span
-                style={{
-                  backgroundImage: 'linear-gradient(to right, #9867F0, #ED4E50)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Hours of Research
-              </span>
-            </h1>
-            <h2 className="text-xl font-light text-center mb-4 ml-[20vw] mr-[20vw] mb-10 text-gray-300">
-              Say Hello to GPT Researcher, your AI mate for rapid insights and comprehensive research
-            </h2>
+          <h1 className="text-4xl font-extrabold text-center lg:text-7xl">
+            Say Goodbye to <br />
+            <span
+              style={{
+                backgroundImage: 'linear-gradient(to right, #9867F0, #ED4E50)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              Hours of Research
+            </span>
+          </h1>
+          <h2 className="text-xl font-light text-center px-4 mb-10 text-gray-300">
+            Say Hello to GPT Researcher, your AI mate for rapid insights and comprehensive research
+          </h2>
         </div>
-        
 
-        {/* input section */}
-        <div className="w-full max-w-[708px] pb-6 mt-20">
+        {/* Input section */}
+        <div className="w-full max-w-[708px] pb-6">
           <InputArea
             promptValue={promptValue}
             setPromptValue={setPromptValue}
-            handleDisplayResult={handleDisplayResult}
+            handleSubmit={handleDisplayResult}
           />
         </div>
 
@@ -70,9 +68,7 @@ const Hero: FC<THeroProps> = ({
             </div>
           ))}
         </div>
-
       </div>
-  
     </div>
   );
 };
