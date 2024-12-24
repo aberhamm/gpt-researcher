@@ -3,23 +3,37 @@ import os
 from typing import Dict, List
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, File, UploadFile, Header
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from backend.server.server_utils import generate_report_files
 from backend.server.websocket_manager import WebSocketManager
-from multi_agents.main import run_research_task
-from gpt_researcher.document.document import DocumentLoader
-from gpt_researcher.master.actions import stream_output
 from backend.server.server_utils import (
-    sanitize_filename, handle_start_command, handle_human_feedback,
-    generate_report_files, send_file_paths, get_config_dict,
+    get_config_dict,
     update_environment_variables, handle_file_upload, handle_file_deletion,
-    execute_multi_agents, handle_websocket_communication, extract_command_data
+    execute_multi_agents, handle_websocket_communication
 )
+
+from gpt_researcher.utils.logging_config import setup_research_logging
+
+import logging
+
+# Get logger instance
+logger = logging.getLogger(__name__)
+
+# Don't override parent logger settings
+logger.propagate = True
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("server_log.txt"),  # Log to file
+        logging.StreamHandler()  # Also print to console
+    ]
+)
+
 
 # Models
 
@@ -45,6 +59,7 @@ class ConfigRequest(BaseModel):
     SERPAPI_API_KEY: str = ''
     SERPER_API_KEY: str = ''
     SEARX_URL: str = ''
+    XAI_API_KEY: str
 
 
 # App initialization
@@ -78,6 +93,12 @@ def startup_event():
     os.makedirs("outputs", exist_ok=True)
     app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
     os.makedirs(DOC_PATH, exist_ok=True)
+    
+    # Setup research logging
+    log_file, json_file, research_logger, json_handler = setup_research_logging()  # Unpack all 4 values
+    research_logger.json_handler = json_handler  # Store the JSON handler on the logger
+    research_logger.info(f"Research log file: {log_file}")
+    research_logger.info(f"Research JSON file: {json_file}")
 
 # Routes
 
@@ -85,26 +106,6 @@ def startup_event():
 @app.get("/")
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "report": None})
-
-
-@app.get("/getConfig")
-async def get_config(
-    langchain_api_key: str = Header(None),
-    openai_api_key: str = Header(None),
-    tavily_api_key: str = Header(None),
-    google_api_key: str = Header(None),
-    google_cx_key: str = Header(None),
-    bing_api_key: str = Header(None),
-    searchapi_api_key: str = Header(None),
-    serpapi_api_key: str = Header(None),
-    serper_api_key: str = Header(None),
-    searx_url: str = Header(None)
-):
-    return get_config_dict(
-        langchain_api_key, openai_api_key, tavily_api_key,
-        google_api_key, google_cx_key, bing_api_key,
-        searchapi_api_key, serpapi_api_key, serper_api_key, searx_url
-    )
 
 
 @app.get("/files/")
@@ -117,12 +118,6 @@ async def list_files():
 @app.post("/api/multi_agents")
 async def run_multi_agents():
     return await execute_multi_agents(manager)
-
-
-@app.post("/setConfig")
-async def set_config(config: ConfigRequest):
-    update_environment_variables(config.dict())
-    return {"message": "Config updated successfully"}
 
 
 @app.post("/upload/")

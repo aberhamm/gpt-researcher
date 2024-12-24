@@ -1,0 +1,127 @@
+.markdown-content {
+  /* Base styles */
+  color: white;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 18px;
+  line-height: 1.6;
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.2;
+    font-weight: 500;
+  }
+
+  h1 { font-size: 2.5em; }
+  h2 { font-size: 2em; }
+  h3 { font-size: 1.5em; }
+  h4 { font-size: 1.2em; }
+  h5 { font-size: 1.1em; }
+  h6 { font-size: 1em; }
+
+  /* Paragraphs and spacing */
+  p {
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  /* Lists */
+  ul, ol {
+    margin: 0;
+    padding: 0 0 0 2em; /* Add left padding for the bullet points */
+    list-style-position: outside; /* Keep bullets outside */
+  }
+
+  li {
+    margin: 0.5em 0; /* Add some vertical spacing between items */
+    display: block; /* Change from grid to block */
+    padding-left: 0.5em; /* Add a little padding after the bullet */
+  }
+
+  /* Remove the custom bullet styling since we'll use native bullets */
+  ul > li::before {
+    content: none;
+  }
+
+  /* Ordered lists */
+  ol {
+    margin: 0;
+    padding: 0 0 0 2em; /* Add left padding for numbers */
+    list-style-position: outside;
+  }
+
+  li {
+    margin: 0.5em 0; /* Add some vertical spacing between items */
+    display: block; /* Change from grid to block */
+  }
+
+  /* Fix paragraph spacing inside list items */
+  li p {
+    margin: 0; /* Remove default paragraph margins */
+    display: inline; /* Make paragraph inline with the number */
+  }
+
+  /* If you want to preserve some spacing between paragraphs within a list item */
+  li p + p {
+    margin-top: 0.5em;
+  }
+
+  /* Links */
+  a {
+    color: rgb(168 85 247);
+    text-decoration: underline;
+    font-weight: 500;
+    
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  /* Code blocks */
+  pre {
+    background-color: #1e1e1e;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1em 0;
+  }
+
+  code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    padding: 0 0.4em;
+    background-color: #1e1e1e;
+    border-radius: 3px;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    border-left: 4px solid rgb(168 85 247);
+    margin: 0;
+    padding-left: 1em;
+    font-style: italic;
+  }
+
+  /* Tables */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+
+  th, td {
+    border: 1px solid #444;
+    padding: 0.5em;
+    text-align: left;
+  }
+
+  th {
+    background-color: #333;
+  }
+
+  /* Horizontal rule */
+  hr {
+    border: 0;
+    border-top: 1px solid #444;
+    margin: 2em 0;
+  }
+} 

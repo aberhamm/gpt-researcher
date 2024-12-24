@@ -21,6 +21,11 @@ const GPTResearcher = (() => {
   const startResearch = () => {
     document.getElementById('output').innerHTML = ''
     document.getElementById('reportContainer').innerHTML = ''
+
+    const imageContainer = document.getElementById('selectedImagesContainer')
+    imageContainer.innerHTML = ''
+    imageContainer.style.display = 'none'
+
     updateState('in_progress')
 
     addAgentResponse({
@@ -40,8 +45,12 @@ const GPTResearcher = (() => {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data)
+      console.log("Received message:", data);  // Debug log
       if (data.type === 'logs') {
         addAgentResponse(data)
+      } else if (data.type === 'images') {
+      console.log("Received images:", data);  // Debug log
+        displaySelectedImages(data)
       } else if (data.type === 'report') {
         writeReport(data, converter)
       } else if (data.type === 'path') {
@@ -95,12 +104,30 @@ const GPTResearcher = (() => {
   }
 
   const updateDownloadLink = (data) => {
-    const pdf_path = data.output.pdf
-    const docx_path = data.output.docx
-    const md_path = data.output.md;
-    document.getElementById('downloadLink').setAttribute('href', pdf_path);
-    document.getElementById('downloadLinkWord').setAttribute('href', docx_path);
-    document.getElementById("downloadLinkMd").setAttribute("href", md_path);
+    if (!data.output) {
+        console.error('No output data received');
+        return;
+    }
+    
+    const { pdf, docx, md, json } = data.output;
+    console.log('Received paths:', { pdf, docx, md, json });
+    
+    // Helper function to safely update link
+    const updateLink = (id, path) => {
+        const element = document.getElementById(id);
+        if (element && path) {
+            console.log(`Setting ${id} href to:`, path);
+            element.setAttribute('href', path);
+            element.classList.remove('disabled');
+        } else {
+            console.warn(`Either element ${id} not found or path not provided`);
+        }
+    };
+
+    updateLink('downloadLink', pdf);
+    updateLink('downloadLinkWord', docx);
+    updateLink('downloadLinkMd', md);
+    updateLink('downloadLinkJson', json);
   }
 
   const updateScroll = () => {
@@ -199,11 +226,52 @@ const GPTResearcher = (() => {
     tagsInput.insertBefore(tagElement, input);
   }
 
+  const displaySelectedImages = (data) => {
+    const imageContainer = document.getElementById('selectedImagesContainer')
+    //imageContainer.innerHTML = '<h3>Selected Images</h3>'
+    const images = JSON.parse(data.output)
+    console.log("Received images:", images);  // Debug log
+    if (images && images.length > 0) {
+      images.forEach(imageUrl => {
+        const imgElement = document.createElement('img')
+        imgElement.src = imageUrl
+        imgElement.alt = 'Research Image'
+        imgElement.style.maxWidth = '200px'
+        imgElement.style.margin = '5px'
+        imgElement.style.cursor = 'pointer'
+        imgElement.onclick = () => showImageDialog(imageUrl)
+        imageContainer.appendChild(imgElement)
+      })
+      imageContainer.style.display = 'block'
+    } else {
+      imageContainer.innerHTML += '<p>No images found for this research.</p>'
+    }
+  }
+
+  const showImageDialog = (imageUrl) => {
+    const dialog = document.createElement('div');
+    dialog.className = 'image-dialog';
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.alt = 'Full-size Research Image';
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.onclick = () => document.body.removeChild(dialog);
+    
+    dialog.appendChild(img);
+    dialog.appendChild(closeBtn);
+    document.body.appendChild(dialog);
+  }
+
   document.addEventListener('DOMContentLoaded', init)
   return {
     startResearch,
     copyToClipboard,
     changeSource,
-      addTag,
+    addTag,
+    displaySelectedImages,
+    showImageDialog,
   }
 })()
