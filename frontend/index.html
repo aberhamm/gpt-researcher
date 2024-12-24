@@ -39,23 +39,6 @@
 </head>
 
 <body>
-
-    <section class="landing">
-        <div class="max-w-5xl mx-auto text-center">
-            <h1 class="text-4xl font-extrabold mx-auto lg:text-7xl">
-                Say Goodbye to <br>
-                <span
-                    style="background-image:linear-gradient(to right, #9867F0, #ED4E50); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Hours
-                    of Research</span>
-            </h1>
-            <p class="max-w-6xl mx-auto text-gray-600 mt-8" style="font-size:20px">
-                Say Hello to <b>GPT Researcher</b>, your AI mate for rapid insights and comprehensive research. <br>
-                GPT Researcher takes care of everything from accurate source gathering and organization of research results to generation of customized reports with citations.
-            </p>
-            <a href="#form" class="btn btn-primary">Get Started</a>
-        </div>
-    </section>
-
     <main class="container" id="form">
         <div class="agent-item"><img src="/static/gptr-logo.png" class="avatar" alt="Auto Agent"></div>
         <form method="POST" class="mt-3" onsubmit="GPTResearcher.startResearch(); return false;">
@@ -184,20 +167,6 @@
             autoAgentDiv.style.display = 'flex';
             agentChoices[0].style.display = 'none';
         });
-
-        const tagsInput = document.getElementById('tags-input');
-        const input = document.getElementById('custom_source');
-
-        if (input) {
-            input.addEventListener('keypress', function (e) {
-            if ((e.key === 'Enter' || e.key === ",") && input.value !== '') {
-                e.preventDefault();
-                GPTResearcher.addTag(input.value);
-                input.value = '';
-            }
-        });
-        }
-
 </script>
 </body>
 
