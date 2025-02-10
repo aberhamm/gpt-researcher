@@ -3,6 +3,7 @@ import ResearchForm from '../Task/ResearchForm';
 import Report from '../Task/Report';
 import AgentLogs from '../Task/AgentLogs';
 import AccessReport from '../ResearchBlocks/AccessReport';
+import { getHost } from '../../helpers/getHost';
 
 interface ChatBoxSettings {
   report_source: string;
@@ -14,6 +15,18 @@ interface ChatBoxProps {
   chatBoxSettings: ChatBoxSettings;
   setChatBoxSettings: React.Dispatch<React.SetStateAction<ChatBoxSettings>>;
 }
+
+interface OutputData {
+  pdf?: string;
+  docx?: string;
+  json?: string;
+}
+
+interface WebSocketMessage {
+  type: 'logs' | 'report' | 'path';
+  output: string | OutputData;
+}
+
 export default function ChatBox({ chatBoxSettings, setChatBoxSettings }: ChatBoxProps) {
 
   const [agentLogs, setAgentLogs] = useState<any[]>([]);
@@ -23,25 +36,26 @@ export default function ChatBox({ chatBoxSettings, setChatBoxSettings }: ChatBox
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const { protocol, pathname } = window.location;
-      let { host } = window.location;
-      host = host.includes('localhost') ? 'localhost:8000' : host;
-      const ws_uri = `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}${pathname}ws`;
+      const fullHost = getHost()
+      const host = fullHost.replace('http://', '').replace('https://', '')
+      
+      const ws_uri = `${fullHost.includes('https') ? 'wss:' : 'ws:'}//${host}/ws`;
       const newSocket = new WebSocket(ws_uri);
       setSocket(newSocket);
 
       newSocket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as WebSocketMessage;
         
         if (data.type === 'logs') {
-          setAgentLogs((prevLogs) => [...prevLogs, data]);
+          setAgentLogs((prevLogs: any[]) => [...prevLogs, data]);
         } else if (data.type === 'report') {
-          setReport((prevReport) => prevReport + data.output);
+          setReport((prevReport: string) => prevReport + (data.output as string));
         } else if (data.type === 'path') {
+          const output = data.output as OutputData;
           setAccessData({
-            pdf: `outputs/${data.output.pdf}`,
-            docx: `outputs/${data.output.docx}`,
-            json: `outputs/${data.output.json}`
+            ...(output.pdf && { pdf: `outputs/${output.pdf}` }),
+            ...(output.docx && { docx: `outputs/${output.docx}` }),
+            ...(output.json && { json: `outputs/${output.json}` })
           });
         }
       };
