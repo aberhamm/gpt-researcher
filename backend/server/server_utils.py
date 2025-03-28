@@ -1,11 +1,14 @@
+import asyncio
 import json
 import os
 import re
 import time
 import shutil
-from typing import Dict, List, Any
+import traceback
+from typing import Awaitable, Dict, List, Any
 from fastapi.responses import JSONResponse, FileResponse
 from gpt_researcher.document.document import DocumentLoader
+from gpt_researcher import GPTResearcher
 from backend.utils import write_md_to_pdf, write_md_to_word, write_text_to_md
 from pathlib import Path
 from datetime import datetime
@@ -72,7 +75,7 @@ class Researcher:
         # Generate unique ID for this research task
         self.research_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(query)}"
         # Initialize logs handler with research ID
-        self.logs_handler = CustomLogsHandler(self.research_id)
+        self.logs_handler = CustomLogsHandler(None, self.research_id)
         self.researcher = GPTResearcher(
             query=query,
             report_type=report_type,
@@ -104,8 +107,8 @@ def sanitize_filename(filename: str) -> str:
     task = '_'.join(task_parts)
     
     # Calculate max length for task portion
-    # 255 - len("outputs/") - len("task_") - len(timestamp) - len("_.json") - safety_margin
-    max_task_length = 255 - 8 - 5 - 10 - 6 - 10  # ~216 chars for task
+    # 255 - len(os.getcwd()) - len("\\gpt-researcher\\outputs\\") - len("task_") - len(timestamp) - len("_.json") - safety_margin
+    max_task_length = 255 - len(os.getcwd()) - 24 - 5 - 10 - 6 - 5  # ~189 chars for task
     
     # Truncate task if needed
     truncated_task = task[:max_task_length] if len(task) > max_task_length else task
@@ -117,8 +120,16 @@ def sanitize_filename(filename: str) -> str:
 
 async def handle_start_command(websocket, data: str, manager):
     json_data = json.loads(data[6:])
-    task, report_type, source_urls, document_urls, tone, headers, report_source = extract_command_data(
-        json_data)
+    (
+        task,
+        report_type,
+        source_urls,
+        document_urls,
+        tone,
+        headers,
+        report_source,
+        query_domains,
+    ) = extract_command_data(json_data)
 
     if not task or not report_type:
         print("Error: Missing task or report_type")
@@ -137,14 +148,15 @@ async def handle_start_command(websocket, data: str, manager):
     sanitized_filename = sanitize_filename(f"task_{int(time.time())}_{task}")
 
     report = await manager.start_streaming(
-        task, 
-        report_type, 
-        report_source, 
-        source_urls, 
+        task,
+        report_type,
+        report_source,
+        source_urls,
         document_urls,
-        tone, 
+        tone,
         websocket,
-        headers
+        headers,
+        query_domains,
     )
     report = str(report)
     file_paths = await generate_report_files(report, sanitized_filename)
@@ -235,17 +247,62 @@ async def execute_multi_agents(manager) -> Any:
 
 
 async def handle_websocket_communication(websocket, manager):
-    while True:
-        data = await websocket.receive_text()
-        if data.startswith("start"):
-            await handle_start_command(websocket, data, manager)
-        elif data.startswith("human_feedback"):
-            await handle_human_feedback(data)
-        elif data.startswith("chat"):
-            await handle_chat(websocket, data, manager)
-        else:
-            print("Error: Unknown command or not enough parameters provided.")
+    running_task: asyncio.Task | None = None
 
+    def run_long_running_task(awaitable: Awaitable) -> asyncio.Task:
+        async def safe_run():
+            try:
+                await awaitable
+            except asyncio.CancelledError:
+                logger.info("Task cancelled.")
+                raise
+            except Exception as e:
+                logger.error(f"Error running task: {e}\n{traceback.format_exc()}")
+                await websocket.send_json(
+                    {
+                        "type": "logs",
+                        "content": "error",
+                        "output": f"Error: {e}",
+                    }
+                )
+
+        return asyncio.create_task(safe_run())
+
+    try:
+        while True:
+            try:
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
+                elif running_task and not running_task.done():
+                    # discard any new request if a task is already running
+                    logger.warning(
+                        f"Received request while task is already running. Request data preview: {data[: min(20, len(data))]}..."
+                    )
+                    websocket.send_json(
+                        {
+                            "types": "logs",
+                            "output": "Task already running. Please wait.",
+                        }
+                    )
+                elif data.startswith("start"):
+                    running_task = run_long_running_task(
+                        handle_start_command(websocket, data, manager)
+                    )
+                elif data.startswith("human_feedback"):
+                    running_task = run_long_running_task(handle_human_feedback(data))
+                elif data.startswith("chat"):
+                    running_task = run_long_running_task(
+                        handle_chat(websocket, data, manager)
+                    )
+                else:
+                    print("Error: Unknown command or not enough parameters provided.")
+            except Exception as e:
+                print(f"WebSocket error: {e}")
+                break
+    finally:
+        if running_task and not running_task.done():
+            running_task.cancel()
 
 def extract_command_data(json_data: Dict) -> tuple:
     return (
@@ -255,5 +312,6 @@ def extract_command_data(json_data: Dict) -> tuple:
         json_data.get("document_urls"),
         json_data.get("tone"),
         json_data.get("headers", {}),
-        json_data.get("report_source")
+        json_data.get("report_source"),
+        json_data.get("query_domains", []),
     )

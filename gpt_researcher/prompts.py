@@ -141,7 +141,7 @@ The response MUST not contain any markdown format or additional text (like ```js
 
 
 def generate_resource_report_prompt(
-    question, context, report_source: str, report_format="apa", tone=None, total_words=1000, language=None
+    question, context, report_source: str, report_format="apa", tone=None, total_words=1000, language="english"
 ):
     """Generates the resource report prompt for the given question and research summary.
 
@@ -172,6 +172,7 @@ def generate_resource_report_prompt(
         "Ensure that the report is well-structured, informative, in-depth, and follows Markdown syntax.\n"
         "Include relevant facts, figures, and numbers whenever available.\n"
         f"The report should have a minimum length of {total_words} words.\n"
+        f"You MUST write the report in the following language: {language}.\n"
         "You MUST include all relevant source urls."
         "Every url should be hyperlinked: [url website](url)"
         f"{reference_prompt}"
@@ -202,15 +203,75 @@ def generate_outline_report_prompt(
     )
 
 
-def get_report_by_type(report_type: str):
-    report_type_mapping = {
-        ReportType.ResearchReport.value: generate_report_prompt,
-        ReportType.ResourceReport.value: generate_resource_report_prompt,
-        ReportType.OutlineReport.value: generate_outline_report_prompt,
-        ReportType.CustomReport.value: generate_custom_report_prompt,
-        ReportType.SubtopicReport.value: generate_subtopic_report_prompt,
-    }
-    return report_type_mapping[report_type]
+def generate_deep_research_prompt(
+    question: str,
+    context: str,
+    report_source: str,
+    report_format="apa",
+    tone=None,
+    total_words=2000,
+    language: str = "english"
+):
+    """Generates the deep research report prompt, specialized for handling hierarchical research results.
+    Args:
+        question (str): The research question
+        context (str): The research context containing learnings with citations
+        report_source (str): Source of the research (web, etc.)
+        report_format (str): Report formatting style
+        tone: The tone to use in writing
+        total_words (int): Minimum word count
+        language (str): Output language
+    Returns:
+        str: The deep research report prompt
+    """
+    reference_prompt = ""
+    if report_source == ReportSource.Web.value:
+        reference_prompt = f"""
+You MUST write all used source urls at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each.
+Every url should be hyperlinked: [url website](url)
+Additionally, you MUST include hyperlinks to the relevant URLs wherever they are referenced in the report: 
+
+eg: Author, A. A. (Year, Month Date). Title of web page. Website Name. [url website](url)
+"""
+    else:
+        reference_prompt = f"""
+You MUST write all used source document names at the end of the report as references, and make sure to not add duplicated sources, but only one reference for each."
+"""
+
+    tone_prompt = f"Write the report in a {tone.value} tone." if tone else ""
+    
+    return f"""
+Using the following hierarchically researched information and citations:
+
+"{context}"
+
+Write a comprehensive research report answering the query: "{question}"
+
+The report should:
+1. Synthesize information from multiple levels of research depth
+2. Integrate findings from various research branches
+3. Present a coherent narrative that builds from foundational to advanced insights
+4. Maintain proper citation of sources throughout
+5. Be well-structured with clear sections and subsections
+6. Have a minimum length of {total_words} words
+7. Follow {report_format} format with markdown syntax
+
+Additional requirements:
+- Prioritize insights that emerged from deeper levels of research
+- Highlight connections between different research branches
+- Include relevant statistics, data, and concrete examples
+- You MUST determine your own concrete and valid opinion based on the given information. Do NOT defer to general and meaningless conclusions.
+- You MUST prioritize the relevance, reliability, and significance of the sources you use. Choose trusted sources over less reliable ones.
+- You must also prioritize new articles over older articles if the source can be trusted.
+- Use in-text citation references in {report_format} format and make it with markdown hyperlink placed at the end of the sentence or paragraph that references them like this: ([in-text citation](url)).
+- {tone_prompt}
+- Write in {language}
+
+{reference_prompt}
+
+Please write a thorough, well-researched report that synthesizes all the gathered information into a cohesive whole.
+Assume the current date is {datetime.now(timezone.utc).strftime('%B %d, %Y')}.
+"""
 
 
 def auto_agent_instructions():
@@ -235,7 +296,7 @@ response:
 task: "what are the most interesting sites in Tel Aviv?"
 response:
 {
-    "server:  "🌍 Travel Agent",
+    "server":  "🌍 Travel Agent",
     "agent_role_prompt": "You are a world-travelled AI tour guide assistant. Your main purpose is to draft engaging, insightful, unbiased, and well-structured travel reports on given locations, including history, attractions, and cultural insights."
 }
 """
@@ -332,7 +393,7 @@ IMPORTANT:Content and Sections Uniqueness:
 
     ### Section Header
     
-    This is a sample text. ([url website](url))
+    This is a sample text ([in-text citation](url)).
 
 - Use H2 for the main subtopic header (##) and H3 for subsections (###).
 - Use smaller Markdown headers (e.g., H2 or H3) for content structure, avoiding the largest header (H1) as it will be used for the larger report's heading.
@@ -350,7 +411,7 @@ Assume the current date is {datetime.now(timezone.utc).strftime('%B %d, %Y')} if
 - You MUST write the report in the following language: {language}.
 - The focus MUST be on the main topic! You MUST Leave out any information un-related to it!
 - Must NOT have any introduction, conclusion, summary or reference section.
-- You MUST include hyperlinks with markdown syntax ([url website](url)) related to the sentences wherever necessary.
+- You MUST use in-text citation references in {report_format.upper()} format and make it with markdown hyperlink placed at the end of the sentence or paragraph that references them like this: ([in-text citation](url)).
 - You MUST mention the difference between the existing content and the new content in the report if you are adding the similar or same subsections wherever necessary.
 - The report should have a minimum length of {total_words} words.
 - Use an {tone.value} tone throughout the report.
@@ -393,19 +454,19 @@ Provide the draft headers in a list format using markdown syntax, for example:
 """
 
 
-def generate_report_introduction(question: str, research_summary: str = "", language: str = "english") -> str:
+def generate_report_introduction(question: str, research_summary: str = "", language: str = "english", report_format: str = "apa") -> str:
     return f"""{research_summary}\n 
 Using the above latest information, Prepare a detailed report introduction on the topic -- {question}.
 - The introduction should be succinct, well-structured, informative with markdown syntax.
 - As this introduction will be part of a larger report, do NOT include any other sections, which are generally present in a report.
 - The introduction should be preceded by an H1 heading with a suitable topic for the entire report.
-- You must include hyperlinks with markdown syntax ([url website](url)) related to the sentences wherever necessary.
+- You must use in-text citation references in {report_format.upper()} format and make it with markdown hyperlink placed at the end of the sentence or paragraph that references them like this: ([in-text citation](url)).
 Assume that the current date is {datetime.now(timezone.utc).strftime('%B %d, %Y')} if required.
 - The output must be in {language} language.
 """
 
 
-def generate_report_conclusion(query: str, report_content: str, language: str = "english") -> str:
+def generate_report_conclusion(query: str, report_content: str, language: str = "english", report_format: str = "apa") -> str:
     """
     Generate a concise conclusion summarizing the main findings and implications of a research report.
 
@@ -431,7 +492,7 @@ def generate_report_conclusion(query: str, report_content: str, language: str = 
     4. Be approximately 2-3 paragraphs long
     
     If there is no "## Conclusion" section title written at the end of the report, please add it to the top of your conclusion. 
-    You must include hyperlinks with markdown syntax ([url website](url)) related to the sentences wherever necessary.
+    You must use in-text citation references in {report_format.upper()} format and make it with markdown hyperlink placed at the end of the sentence or paragraph that references them like this: ([in-text citation](url)).
 
     IMPORTANT: The entire conclusion MUST be written in {language} language.
 
@@ -447,6 +508,7 @@ report_type_mapping = {
     ReportType.OutlineReport.value: generate_outline_report_prompt,
     ReportType.CustomReport.value: generate_custom_report_prompt,
     ReportType.SubtopicReport.value: generate_subtopic_report_prompt,
+    ReportType.DeepResearch.value: generate_deep_research_prompt,
 }
 
 

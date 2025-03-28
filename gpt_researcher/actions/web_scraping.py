@@ -1,12 +1,17 @@
-from typing import List, Dict, Any, Tuple
+from typing import Any
 from colorama import Fore, Style
+
+from gpt_researcher.utils.workers import WorkerPool
 from ..scraper import Scraper
 from ..config.config import Config
 from ..utils.logger import get_formatted_logger
 
 logger = get_formatted_logger()
 
-def scrape_urls(urls, cfg=None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+
+async def scrape_urls(
+    urls, cfg: Config, worker_pool: WorkerPool
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """
     Scrapes the urls
     Args:
@@ -14,7 +19,7 @@ def scrape_urls(urls, cfg=None) -> Tuple[List[Dict[str, Any]], List[Dict[str, An
         cfg: Config (optional)
 
     Returns:
-        Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]: Tuple containing scraped content and images
+        tuple[list[dict[str, Any]], list[dict[str, Any]]]: tuple containing scraped content and images
 
     """
     scraped_data = []
@@ -26,26 +31,27 @@ def scrape_urls(urls, cfg=None) -> Tuple[List[Dict[str, Any]], List[Dict[str, An
     )
 
     try:
-        scraper = Scraper(urls, user_agent, cfg.scraper)
-        scraped_data = scraper.run()
+        scraper = Scraper(urls, user_agent, cfg.scraper, worker_pool=worker_pool)
+        scraped_data = await scraper.run()
         for item in scraped_data:
             if 'image_urls' in item:
-                images.extend([img for img in item['image_urls']])
+                images.extend(item['image_urls'])
     except Exception as e:
         print(f"{Fore.RED}Error in scrape_urls: {e}{Style.RESET_ALL}")
 
     return scraped_data, images
 
-async def filter_urls(urls: List[str], config: Config) -> List[str]:
+
+async def filter_urls(urls: list[str], config: Config) -> list[str]:
     """
     Filter URLs based on configuration settings.
 
     Args:
-        urls (List[str]): List of URLs to filter.
+        urls (list[str]): List of URLs to filter.
         config (Config): Configuration object.
 
     Returns:
-        List[str]: Filtered list of URLs.
+        list[str]: Filtered list of URLs.
     """
     filtered_urls = []
     for url in urls:
@@ -70,16 +76,16 @@ async def extract_main_content(html_content: str) -> str:
     # For now, we'll just return the raw HTML as a placeholder
     return html_content
 
-async def process_scraped_data(scraped_data: List[Dict[str, Any]], config: Config) -> List[Dict[str, Any]]:
+async def process_scraped_data(scraped_data: list[dict[str, Any]], config: Config) -> list[dict[str, Any]]:
     """
     Process the scraped data to extract and clean the main content.
 
     Args:
-        scraped_data (List[Dict[str, Any]]): List of dictionaries containing scraped data.
+        scraped_data (list[dict[str, Any]]): List of dictionaries containing scraped data.
         config (Config): Configuration object.
 
     Returns:
-        List[Dict[str, Any]]: Processed scraped data.
+        list[dict[str, Any]]: Processed scraped data.
     """
     processed_data = []
     for item in scraped_data:

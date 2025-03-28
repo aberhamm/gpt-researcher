@@ -13,25 +13,30 @@ class DetailedReport:
         report_source: str,
         source_urls: List[str] = [],
         document_urls: List[str] = [],
+        query_domains: List[str] = [],
         config_path: str = None,
         tone: Any = "",
         websocket: WebSocket = None,
         subtopics: List[Dict] = [],
-        headers: Optional[Dict] = None
+        headers: Optional[Dict] = None,
+        complement_source_urls: bool = False,
     ):
         self.query = query
         self.report_type = report_type
         self.report_source = report_source
         self.source_urls = source_urls
         self.document_urls = document_urls
+        self.query_domains = query_domains
         self.config_path = config_path
         self.tone = tone
         self.websocket = websocket
         self.subtopics = subtopics
         self.headers = headers or {}
-
+        self.complement_source_urls = complement_source_urls
+        
         self.gpt_researcher = GPTResearcher(
             query=self.query,
+            query_domains=self.query_domains,
             report_type="research_report",
             report_source=self.report_source,
             source_urls=self.source_urls,
@@ -39,7 +44,8 @@ class DetailedReport:
             config_path=self.config_path,
             tone=self.tone,
             websocket=self.websocket,
-            headers=self.headers
+            headers=self.headers,
+            complement_source_urls=self.complement_source_urls
         )
         self.existing_headers: List[Dict] = []
         self.global_context: List[str] = []
@@ -89,6 +95,7 @@ class DetailedReport:
         current_subtopic_task = subtopic.get("task")
         subtopic_assistant = GPTResearcher(
             query=current_subtopic_task,
+            query_domains=self.query_domains,
             report_type="subtopic_report",
             report_source=self.report_source,
             websocket=self.websocket,
@@ -99,6 +106,8 @@ class DetailedReport:
             agent=self.gpt_researcher.agent,
             role=self.gpt_researcher.role,
             tone=self.tone,
+            complement_source_urls=self.complement_source_urls,
+            source_urls=self.source_urls
         )
 
         subtopic_assistant.context = list(set(self.global_context))

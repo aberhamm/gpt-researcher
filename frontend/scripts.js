@@ -18,9 +18,11 @@ const GPTResearcher = (() => {
     }
   }
 
+  let dispose_socket = null
   const startResearch = () => {
     document.getElementById('output').innerHTML = ''
     document.getElementById('reportContainer').innerHTML = ''
+    dispose_socket?.()
 
     const imageContainer = document.getElementById('selectedImagesContainer')
     imageContainer.innerHTML = ''
@@ -32,7 +34,7 @@ const GPTResearcher = (() => {
       output: '🤔 Thinking about research questions for the task...',
     })
 
-    listenToSockEvents()
+    dispose_socket = listenToSockEvents()
   }
 
   const listenToSockEvents = () => {
@@ -75,6 +77,14 @@ const GPTResearcher = (() => {
         source_urls = source_urls.slice(0, source_urls.length - 1)
       }
 
+      const query_domains_str = document.querySelector('input[name="query_domains"]').value
+      let query_domains = []
+      if (query_domains_str) {
+        query_domains = query_domains_str.split(',')
+          .map((domain) => domain.trim())
+          .filter((domain) => domain.length > 0);
+      }
+
       const requestData = {
         task: task,
         report_type: report_type,
@@ -82,10 +92,22 @@ const GPTResearcher = (() => {
         source_urls: source_urls,
         tone: tone,
         agent: agent,
+        query_domains: query_domains,
       }
 
       socket.send(`start ${JSON.stringify(requestData)}`)
     }
+
+    // return dispose function
+    return () => {
+      try {
+        if (socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
+          socket.close();
+        }
+      } catch (e) {
+        console.error('Error closing socket:', e)
+      }
+    }; 
   }
 
   const addAgentResponse = (data) => {

@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse, parse_qs
 import logging
 import hashlib
+import re
+import bs4
 
 def get_relevant_images(soup: BeautifulSoup, url: str) -> list:
     """Extract relevant images from the page"""
@@ -39,12 +41,7 @@ def get_relevant_images(soup: BeautifulSoup, url: str) -> list:
         # Sort images by score (highest first)
         sorted_images = sorted(image_urls, key=lambda x: x['score'], reverse=True)
         
-        # Select all images with score 3 and 2, then add score 1 images up to a total of 10
-        high_score_images = [img for img in sorted_images if img['score'] in [3, 2]]
-        low_score_images = [img for img in sorted_images if img['score'] == 1]
-        
-        result = high_score_images + low_score_images[:max(0, 10 - len(high_score_images))]
-        return result[:10]  # Ensure we don't return more than 10 images in total
+        return sorted_images[:10]  # Ensure we don't return more than 10 images in total
     
     except Exception as e:
         logging.error(f"Error in get_relevant_images: {e}")
@@ -84,3 +81,44 @@ def get_image_hash(image_url: str) -> str:
     except Exception as e:
         logging.error(f"Error calculating image hash for {image_url}: {e}")
         return None
+
+
+def clean_soup(soup: BeautifulSoup) -> BeautifulSoup:
+    """Clean the soup by removing unwanted tags"""
+    for tag in soup.find_all(
+        [
+            "script",
+            "style",
+            "footer",
+            "header",
+            "nav",
+            "menu",
+            "sidebar",
+            "svg",
+        ]
+    ):
+        tag.decompose()
+
+    disallowed_class_set = {"nav", "menu", "sidebar", "footer"}
+
+    # clean tags with certain classes
+    def does_tag_have_disallowed_class(elem) -> bool:
+        if not isinstance(elem, bs4.Tag):
+            return False
+
+        return any(
+            cls_name in disallowed_class_set for cls_name in elem.get("class", [])
+        )
+
+    for tag in soup.find_all(does_tag_have_disallowed_class):
+        tag.decompose()
+
+    return soup
+
+
+def get_text_from_soup(soup: BeautifulSoup) -> str:
+    """Get the relevant text from the soup with improved filtering"""
+    text = soup.get_text(strip=True, separator="\n")
+    # Remove excess whitespace
+    text = re.sub(r"\s{2,}", " ", text)
+    return text
