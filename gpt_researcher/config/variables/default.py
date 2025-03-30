@@ -22,7 +22,7 @@ DEFAULT_CONFIG: BaseConfig = {
     "MAX_ITERATIONS": 4,
     "AGENT_ROLE": None,
     "SCRAPER": "bs",
-    "MAX_SCRAPER_WORKERS": 15,
+    "MAX_SCRAPER_WORKERS": 10,
     "MAX_SUBTOPICS": 3,
     "LANGUAGE": "english",
     "REPORT_SOURCE": "web",
@@ -30,5 +30,5 @@ DEFAULT_CONFIG: BaseConfig = {
     # Deep research specific settings
     "DEEP_RESEARCH_BREADTH": 3,
     "DEEP_RESEARCH_DEPTH": 2,
-    "DEEP_RESEARCH_CONCURRENCY": 4,
+    "DEEP_RESEARCH_CONCURRENCY": 2,
 }

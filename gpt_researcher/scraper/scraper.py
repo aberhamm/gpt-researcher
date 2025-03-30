@@ -8,6 +8,7 @@ import importlib
 import logging
 
 from gpt_researcher.utils.workers import WorkerPool
+from gpt_researcher.utils.db_utils import DatabaseManager
 
 from . import (
     ArxivScraper,
@@ -26,16 +27,25 @@ class Scraper:
     Scraper class to extract the content from the links
     """
 
-    def __init__(self, urls, user_agent, scraper, worker_pool: WorkerPool):
+    def __init__(
+        self, urls, user_agent, scraper, worker_pool: WorkerPool, job_id: str = None
+    ):
         """
         Initialize the Scraper class.
         Args:
-            urls:
+            urls: List of URLs to scrape
+            user_agent: User agent string for requests
+            scraper: Type of scraper to use
+            worker_pool: Worker pool for concurrent scraping
+            job_id: Optional job ID for database tracking
         """
         self.urls = urls
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": user_agent})
         self.scraper = scraper
+        self.job_id = job_id
+        self.db = DatabaseManager() if job_id else None
+
         if self.scraper == "tavily_extract":
             self._check_pkg(self.scraper)
         if self.scraper == "firecrawl":
@@ -130,14 +140,23 @@ class Scraper:
                 self.logger.info(f"URL: {link}")
                 self.logger.info("=" * 50)
 
-                if not content or len(content) < 100:
-                    self.logger.warning(f"Content too short or empty for {link}")
-                    return {
-                        "url": link,
-                        "raw_content": None,
-                        "image_urls": [],
-                        "title": title,
-                    }
+                # Save to database if job_id is provided
+                if self.job_id and self.db:
+                    try:
+                        metadata = {
+                            "scraper": scraper_name,
+                            "image_urls": image_urls,
+                            "content_length": len(content),
+                        }
+                        self.db.insert_scraped_page(
+                            job_id=self.job_id,
+                            url=link,
+                            title=title,
+                            content=content,
+                            metadata=metadata,
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Error saving to database: {str(e)}")
 
                 return {
                     "url": link,

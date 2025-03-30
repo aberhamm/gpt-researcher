@@ -12,6 +12,7 @@ markdown
 langchain
 langchain_community
 langchain-openai
+supabase
 
 tiktoken
 gpt-researcher

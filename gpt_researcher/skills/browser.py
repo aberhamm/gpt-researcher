@@ -30,8 +30,12 @@ class BrowserManager:
                 self.researcher.websocket,
             )
 
+        # scrapes batch of urls
         scraped_content, images = await scrape_urls(
-            urls, self.researcher.cfg, self.worker_pool
+            urls,
+            self.researcher.cfg,
+            self.worker_pool,
+            job_id=self.researcher.job_id,  # Pass the job_id to the scraper
         )
         self.researcher.add_research_sources(scraped_content)
         new_images = self.select_top_images(images, k=4)  # Select top 4 images
@@ -78,11 +82,11 @@ class BrowserManager:
 
         # Process images in descending order of their scores
         for img in sorted(images, key=lambda im: im["score"], reverse=True):
-            img_hash = get_image_hash(img['url'])
+            img_hash = get_image_hash(img["url"])
             if (
                 img_hash
                 and img_hash not in seen_hashes
-                and img['url'] not in current_research_images
+                and img["url"] not in current_research_images
             ):
                 seen_hashes.add(img_hash)
                 unique_images.append(img["url"])
