@@ -71,18 +71,14 @@ class DatabaseManager:
     def create_research_job(
         self,
         query: str,
-        agent: Optional[str] = None,
-        role: Optional[str] = None,
-        report_type: Optional[str] = None,
-        additional_info: Optional[Dict[str, Any]] = None,
+        agent: str,
+        role: str,
+        report_type: str,
+        parent_job_id: str | None = None,
+        additional_info: dict | None = None,
     ) -> str:
-        """Create a new research job record in the database."""
+        """Create a new research job in the database."""
         try:
-            # Convert additional_info to JSONB string if provided
-            additional_info_json = (
-                json.dumps(additional_info) if additional_info else "{}"
-            )
-
             job_data = {
                 "id": str(uuid.uuid4()),
                 "query": query,
@@ -94,39 +90,26 @@ class DatabaseManager:
                 "research_costs": 0.0,
                 "visited_urls": json.dumps([]),  # Convert to JSONB string
                 "report": None,
-                "additional_info": additional_info_json,
+                "additional_info": (
+                    json.dumps(additional_info) if additional_info else "{}"
+                ),
             }
 
-            logger.debug(
-                f"Creating research job with data: {json.dumps(job_data, indent=2)}"
-            )
+            if parent_job_id:
+                job_data["parent_job_id"] = parent_job_id
 
-            try:
-                response = self.supabase.table("jobs").insert(job_data).execute()
-            except Exception as e:
-                logger.error(e)
-
-            self._log_response_details(response, "Create Research Job")
+            response = self.supabase.table("jobs").insert(job_data).execute()
 
             if hasattr(response, "error") and response.error:
-                error_msg = f"Error creating job: {response.error}"
-                logger.error(error_msg)
-                raise Exception(error_msg)
+                logger.error(f"Error creating research job: {response.error}")
+                raise Exception(f"Failed to create research job: {response.error}")
 
-            if not response.data:
-                error_msg = "No data returned from insert operation"
-                logger.error(error_msg)
-                raise Exception(error_msg)
-
-            logger.info(f"Successfully created research job with ID: {job_data['id']}")
-            return job_data["id"]
+            job_id = response.data[0]["id"]
+            logger.info(f"Created research job with ID: {job_id}")
+            return job_id
 
         except Exception as e:
-            logger.error(f"Failed to create research job: {str(e)}")
-            logger.error(f"Query: {query}")
-            logger.error(f"Agent: {agent}")
-            logger.error(f"Role: {role}")
-            logger.error(f"Report Type: {report_type}")
+            logger.error(f"Error creating research job: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise
 
@@ -334,5 +317,26 @@ class DatabaseManager:
             logger.error(f"Level: {level}")
             logger.error(f"Message: {message}")
             logger.error(f"Details: {details}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+
+    def get_child_jobs(self, parent_job_id: str) -> list:
+        """Get all child jobs for a given parent job ID."""
+        try:
+            response = (
+                self.supabase.table("jobs")
+                .select("*")
+                .eq("parent_job_id", parent_job_id)
+                .execute()
+            )
+
+            if hasattr(response, "error") and response.error:
+                logger.error(f"Error getting child jobs: {response.error}")
+                raise Exception(f"Failed to get child jobs: {response.error}")
+
+            return response.data
+
+        except Exception as e:
+            logger.error(f"Error getting child jobs: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise

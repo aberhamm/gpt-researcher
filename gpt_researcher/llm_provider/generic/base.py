@@ -25,7 +25,7 @@ _SUPPORTED_PROVIDERS = {
     "deepseek",
     "litellm",
     "gigachat",
-    "openrouter"
+    "openrouter",
 }
 
 NO_SUPPORT_TEMPERATURE_MODELS = [
@@ -36,18 +36,17 @@ NO_SUPPORT_TEMPERATURE_MODELS = [
     "o1-2024-12-17",
     "o3-mini",
     "o3-mini-2025-01-31",
-    "o1-preview"
+    "o1-preview",
 ]
 
-SUPPORT_REASONING_EFFORT_MODELS = [
-    "o3-mini",
-    "o3-mini-2025-01-31"
-]
+SUPPORT_REASONING_EFFORT_MODELS = ["o3-mini", "o3-mini-2025-01-31"]
+
 
 class ReasoningEfforts(Enum):
     High = "high"
     Medium = "medium"
     Low = "low"
+
 
 class GenericLLMProvider:
 
@@ -99,7 +98,7 @@ class GenericLLMProvider:
             _check_pkg("langchain_community")
             _check_pkg("langchain_ollama")
             from langchain_ollama import ChatOllama
-            
+
             llm = ChatOllama(base_url=os.environ["OLLAMA_BASE_URL"], **kwargs)
         elif provider == "together":
             _check_pkg("langchain_together")
@@ -146,10 +145,11 @@ class GenericLLMProvider:
             _check_pkg("langchain_openai")
             from langchain_openai import ChatOpenAI
 
-            llm = ChatOpenAI(openai_api_base='https://api.deepseek.com',
-                     openai_api_key=os.environ["DEEPSEEK_API_KEY"],
-                     **kwargs
-                )
+            llm = ChatOpenAI(
+                openai_api_base="https://api.deepseek.com",
+                openai_api_key=os.environ["DEEPSEEK_API_KEY"],
+                **kwargs,
+            )
         elif provider == "litellm":
             _check_pkg("langchain_community")
             from langchain_community.chat_models.litellm import ChatLiteLLM
@@ -159,34 +159,38 @@ class GenericLLMProvider:
             _check_pkg("langchain_gigachat")
             from langchain_gigachat.chat_models import GigaChat
 
-            kwargs.pop("model", None) # Use env GIGACHAT_MODEL=GigaChat-Max
+            kwargs.pop("model", None)  # Use env GIGACHAT_MODEL=GigaChat-Max
             llm = GigaChat(**kwargs)
         elif provider == "openrouter":
             _check_pkg("langchain_openai")
             from langchain_openai import ChatOpenAI
             from langchain_core.rate_limiters import InMemoryRateLimiter
 
-            rps = float(os.environ["OPENROUTER_LIMIT_RPS"]) if "OPENROUTER_LIMIT_RPS" in os.environ else 1.0
-            
+            rps = (
+                float(os.environ["OPENROUTER_LIMIT_RPS"])
+                if "OPENROUTER_LIMIT_RPS" in os.environ
+                else 1.0
+            )
+
             rate_limiter = InMemoryRateLimiter(
                 requests_per_second=rps,
                 check_every_n_seconds=0.1,
                 max_bucket_size=10,
             )
 
-            llm = ChatOpenAI(openai_api_base='https://openrouter.ai/api/v1',
-                     openai_api_key=os.environ["OPENROUTER_API_KEY"],
-                     rate_limiter=rate_limiter,
-                     **kwargs
-                )
-        
+            llm = ChatOpenAI(
+                openai_api_base="https://openrouter.ai/api/v1",
+                openai_api_key=os.environ["OPENROUTER_API_KEY"],
+                rate_limiter=rate_limiter,
+                **kwargs,
+            )
+
         else:
             supported = ", ".join(_SUPPORTED_PROVIDERS)
             raise ValueError(
                 f"Unsupported {provider}.\n\nSupported model providers are: {supported}"
             )
         return cls(llm)
-
 
     async def get_chat_response(self, messages, stream, websocket=None):
         if not stream:
@@ -229,17 +233,20 @@ def _check_pkg(pkg: str) -> None:
         pkg_kebab = pkg.replace("_", "-")
         # Import colorama and initialize it
         init(autoreset=True)
-        
+
         try:
             print(f"{Fore.YELLOW}Installing {pkg_kebab}...{Style.RESET_ALL}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", pkg_kebab])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "-U", pkg_kebab]
+            )
             print(f"{Fore.GREEN}Successfully installed {pkg_kebab}{Style.RESET_ALL}")
-            
+
             # Try importing again after install
             importlib.import_module(pkg)
-            
+
         except subprocess.CalledProcessError:
             raise ImportError(
-                Fore.RED + f"Failed to install {pkg_kebab}. Please install manually with "
+                Fore.RED
+                + f"Failed to install {pkg_kebab}. Please install manually with "
                 f"`pip install -U {pkg_kebab}`"
             )

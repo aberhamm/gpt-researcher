@@ -56,6 +56,7 @@ class GPTResearcher:
         headers: dict | None = None,
         max_subtopics: int = 5,
         log_handler=None,
+        parent_job_id: str | None = None,
     ):
         # Initialize database manager
         try:
@@ -65,11 +66,13 @@ class GPTResearcher:
                 agent=agent,
                 role=role,
                 report_type=report_type,
+                parent_job_id=parent_job_id,
                 additional_info={
                     "report_format": report_format,
                     "report_source": report_source,
                     "tone": str(tone),
                     "max_subtopics": max_subtopics,
+                    "parent_query": parent_query,
                 },
             )
             # Initialize logger with database support

@@ -5,55 +5,8 @@ from typing import Literal, Optional
 
 import click
 from .db_utils import DatabaseManager
-from rich.logging import RichHandler
-from rich.console import Console
 
 TRACE_LOG_LEVEL = 5
-
-
-def get_formatted_logger(
-    job_id: Optional[str] = None, db: Optional[DatabaseManager] = None
-) -> logging.Logger:
-    """Get a logger with both console and database logging."""
-    logger = logging.getLogger(__name__)
-
-    # Set the logging level
-    logger.setLevel(logging.INFO)
-
-    # Remove any existing handlers to avoid duplicates
-    logger.handlers = []
-
-    # Create console handler with rich formatting
-    console = Console()
-    console_handler = RichHandler(
-        console=console,
-        show_time=True,
-        show_path=False,
-        rich_tracebacks=True,
-        tracebacks_extra_lines=3,
-        tracebacks_theme="monokai",
-        tracebacks_word_wrap=False,
-        tracebacks_show_locals=True,
-        tracebacks_suppress=[logging],
-    )
-
-    # Create formatter for console output
-    console_formatter = logging.Formatter("%(message)s", datefmt="%H:%M:%S")
-    console_handler.setFormatter(console_formatter)
-
-    # Add console handler
-    logger.addHandler(console_handler)
-
-    # Add database handler if job_id and db are provided
-    if job_id and db:
-        db_handler = DatabaseLogHandler(job_id, db)
-        db_handler.setFormatter(logging.Formatter("%(message)s"))
-        logger.addHandler(db_handler)
-
-    # Disable propagation to prevent duplicate logging
-    logger.propagate = False
-
-    return logger
 
 
 class ColourizedFormatter(logging.Formatter):
@@ -141,3 +94,39 @@ class DatabaseLogHandler(logging.Handler):
             )
         except Exception:
             self.handleError(record)
+
+
+def get_formatted_logger(
+    job_id: Optional[str] = None, db: Optional[DatabaseManager] = None
+) -> logging.Logger:
+    """Get a logger with both console and database logging."""
+    logger = logging.getLogger(__name__)
+    # Set the logging level
+    logger.setLevel(logging.INFO)
+
+    # Check if the logger already has handlers to avoid duplicates
+    if not logger.handlers:
+        # Create a handler
+        handler = logging.StreamHandler()
+
+        # Create a formatter using DefaultFormatter
+        formatter = DefaultFormatter(
+            "%(levelprefix)s [%(asctime)s] %(message)s", datefmt="%H:%M:%S"
+        )
+
+        # Set the formatter for the handler
+        handler.setFormatter(formatter)
+
+        # Add the handler to the logger
+        logger.addHandler(handler)
+
+    # Add database handler if job_id and db are provided
+    if job_id and db:
+        db_handler = DatabaseLogHandler(job_id, db)
+        db_handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(db_handler)
+
+    # Disable propagation to prevent duplicate logging from parent loggers
+    logger.propagate = False
+
+    return logger

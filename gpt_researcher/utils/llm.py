@@ -7,7 +7,11 @@ from typing import Any
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 
-from gpt_researcher.llm_provider.generic.base import NO_SUPPORT_TEMPERATURE_MODELS, SUPPORT_REASONING_EFFORT_MODELS, ReasoningEfforts
+from gpt_researcher.llm_provider.generic.base import (
+    NO_SUPPORT_TEMPERATURE_MODELS,
+    SUPPORT_REASONING_EFFORT_MODELS,
+    ReasoningEfforts,
+)
 
 from ..prompts import generate_subtopics_prompt
 from .costs import estimate_llm_cost
@@ -17,20 +21,21 @@ import os
 
 def get_llm(llm_provider, **kwargs):
     from gpt_researcher.llm_provider import GenericLLMProvider
+
     return GenericLLMProvider.from_provider(llm_provider, **kwargs)
 
 
 async def create_chat_completion(
-        messages: list[dict[str, str]],
-        model: str | None = None,
-        temperature: float | None = 0.4,
-        max_tokens: int | None = 4000,
-        llm_provider: str | None = None,
-        stream: bool = False,
-        websocket: Any | None = None,
-        llm_kwargs: dict[str, Any] | None = None,
-        cost_callback: callable = None,
-        reasoning_effort: str | None = ReasoningEfforts.Medium.value
+    messages: list[dict[str, str]],
+    model: str | None = None,
+    temperature: float | None = 0.4,
+    max_tokens: int | None = 4000,
+    llm_provider: str | None = None,
+    stream: bool = False,
+    websocket: Any | None = None,
+    llm_kwargs: dict[str, Any] | None = None,
+    cost_callback: callable = None,
+    reasoning_effort: str | None = ReasoningEfforts.Medium.value,
 ) -> str:
     """Create a chat completion using the OpenAI API
     Args:
@@ -51,34 +56,29 @@ async def create_chat_completion(
     if model is None:
         raise ValueError("Model cannot be None")
     if max_tokens is not None and max_tokens > 16001:
-        raise ValueError(
-            f"Max tokens cannot be more than 16,000, but got {max_tokens}")
+        raise ValueError(f"Max tokens cannot be more than 16,000, but got {max_tokens}")
 
     # Get the provider from supported providers
-    kwargs = {
-        'model': model,
-        **(llm_kwargs or {})
-    }
+    kwargs = {"model": model, **(llm_kwargs or {})}
 
-    if model in SUPPORT_REASONING_EFFORT_MODELS:
-        kwargs['reasoning_effort'] = reasoning_effort
+    # Only add reasoning_effort if the model explicitly supports it
+    if model in SUPPORT_REASONING_EFFORT_MODELS and reasoning_effort:
+        kwargs["model_kwargs"] = {"reasoning_effort": reasoning_effort}
 
     if model not in NO_SUPPORT_TEMPERATURE_MODELS:
-        kwargs['temperature'] = temperature
-        kwargs['max_tokens'] = max_tokens
+        kwargs["temperature"] = temperature
+        kwargs["max_tokens"] = max_tokens
 
     if llm_provider == "openai":
         base_url = os.environ.get("OPENAI_BASE_URL", None)
         if base_url:
-            kwargs['openai_api_base'] = base_url
+            kwargs["openai_api_base"] = base_url
 
     provider = get_llm(llm_provider, **kwargs)
     response = ""
     # create response
     for _ in range(10):  # maximum of 10 attempts
-        response = await provider.get_chat_response(
-            messages, stream, websocket
-        )
+        response = await provider.get_chat_response(messages, stream, websocket)
 
         if cost_callback:
             llm_costs = estimate_llm_cost(str(messages), response)
@@ -90,7 +90,9 @@ async def create_chat_completion(
     raise RuntimeError(f"Failed to get response from {llm_provider} API")
 
 
-async def construct_subtopics(task: str, data: str, config, subtopics: list = []) -> list:
+async def construct_subtopics(
+    task: str, data: str, config, subtopics: list = []
+) -> list:
     """
     Construct subtopics based on the given task and data.
 
@@ -109,20 +111,17 @@ async def construct_subtopics(task: str, data: str, config, subtopics: list = []
         prompt = PromptTemplate(
             template=generate_subtopics_prompt(),
             input_variables=["task", "data", "subtopics", "max_subtopics"],
-            partial_variables={
-                "format_instructions": parser.get_format_instructions()},
+            partial_variables={"format_instructions": parser.get_format_instructions()},
         )
 
-        kwargs = {
-            'model': config.smart_llm_model,
-            **(config.llm_kwargs or {})
-        }
+        kwargs = {"model": config.smart_llm_model, **(config.llm_kwargs or {})}
 
+        # Only add reasoning_effort if the model explicitly supports it
         if config.smart_llm_model in SUPPORT_REASONING_EFFORT_MODELS:
-            kwargs['reasoning_effort'] = ReasoningEfforts.High.value
-        else:
-            kwargs['temperature'] = config.temperature
-            kwargs['max_tokens'] = config.smart_token_limit
+            kwargs["model_kwargs"] = {"reasoning_effort": ReasoningEfforts.High.value}
+        elif model not in NO_SUPPORT_TEMPERATURE_MODELS:
+            kwargs["temperature"] = config.temperature
+            kwargs["max_tokens"] = config.smart_token_limit
 
         provider = get_llm(config.smart_llm_provider, **kwargs)
 
@@ -130,12 +129,14 @@ async def construct_subtopics(task: str, data: str, config, subtopics: list = []
 
         chain = prompt | model | parser
 
-        output = chain.invoke({
-            "task": task,
-            "data": data,
-            "subtopics": subtopics,
-            "max_subtopics": config.max_subtopics
-        })
+        output = chain.invoke(
+            {
+                "task": task,
+                "data": data,
+                "subtopics": subtopics,
+                "max_subtopics": config.max_subtopics,
+            }
+        )
 
         return output
 
