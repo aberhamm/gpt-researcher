@@ -55,12 +55,12 @@ class FireCrawl:
             if "error" in response:
                 print("Scrape failed! : " + str(response["error"]))
                 return "", [], ""
-            elif response["metadata"]["statusCode"] != 200:
+            elif response.metadata["statusCode"] != 200:
                 print("Scrape failed! : " + str(response))
                 return "", [], ""
 
             # Extract the content (markdown) and title from FireCrawl response
-            content = response.data.markdown
+            content = response.markdown
             title = response.metadata.get("title", "")
 
             # Parse the HTML content of the response to create a BeautifulSoup object for the utility functions
