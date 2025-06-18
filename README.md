@@ -35,7 +35,9 @@ The agent produces detailed, factual, and unbiased research reports with citatio
 - Selective web sources can introduce bias into research tasks.
 
 ## Demo
-https://github.com/user-attachments/assets/2cc38f6a-9f66-4644-9e69-a46c40e296d4
+https://github.com/user-attachments/assets/8fcaaa4c-31e5-4814-89b4-94f1433d139d
+
+
 
 ## Architecture
 
@@ -67,18 +69,6 @@ Steps:
 - 🔍 JavaScript-enabled web scraping.
 - 📂 Maintains memory and context throughout research.
 - 📄 Export reports to PDF, Word, and other formats.
-
-## ✨ Deep Research
-
-GPT Researcher now includes Deep Research - an advanced recursive research workflow that explores topics with agentic depth and breadth. This feature employs a tree-like exploration pattern, diving deeper into subtopics while maintaining a comprehensive view of the research subject.
-
-- 🌳 Tree-like exploration with configurable depth and breadth
-- ⚡️ Concurrent processing for faster results
-- 🤝 Smart context management across research branches
-- ⏱️ Takes ~5 minutes per deep research
-- 💰 Costs ~$0.4 per research (using `o3-mini` on "high" reasoning effort)
-
-[Learn more about Deep Research](https://docs.gptr.dev/docs/gpt-researcher/gptr/deep_research) in our documentation.
 
 ## 📖 Documentation
 
@@ -129,7 +119,7 @@ pip install gpt-researcher
 from gpt_researcher import GPTResearcher
 
 query = "why is Nvidia stock going up?"
-researcher = GPTResearcher(query=query, report_type="research_report")
+researcher = GPTResearcher(query=query)
 # Conduct research on the given query
 research_result = await researcher.conduct_research()
 # Write the report
@@ -139,6 +129,52 @@ report = await researcher.write_report()
 
 **For more examples and configurations, please refer to the [PIP documentation](https://docs.gptr.dev/docs/gpt-researcher/gptr/pip-package) page.**
 
+### 🔧 MCP Client
+GPT Researcher supports MCP integration to connect with specialized data sources like GitHub repositories, databases, and custom APIs. This enables research from data sources alongside web search.
+
+```bash
+export RETRIEVER=tavily,mcp  # Enable hybrid web + MCP research
+```
+
+```python
+from gpt_researcher import GPTResearcher
+import asyncio
+import os
+
+async def mcp_research_example():
+    # Enable MCP with web search
+    os.environ["RETRIEVER"] = "tavily,mcp"
+    
+    researcher = GPTResearcher(
+        query="What are the top open source web research agents?",
+        mcp_configs=[
+            {
+                "name": "github",
+                "command": "npx",
+                "args": ["-y", "@modelcontextprotocol/server-github"],
+                "env": {"GITHUB_TOKEN": os.getenv("GITHUB_TOKEN")}
+            }
+        ]
+    )
+    
+    research_result = await researcher.conduct_research()
+    report = await researcher.write_report()
+    return report
+```
+
+> For comprehensive MCP documentation and advanced examples, visit the [MCP Integration Guide](https://docs.gptr.dev/docs/gpt-researcher/retrievers/mcp-configs).
+
+## ✨ Deep Research
+
+GPT Researcher now includes Deep Research - an advanced recursive research workflow that explores topics with agentic depth and breadth. This feature employs a tree-like exploration pattern, diving deeper into subtopics while maintaining a comprehensive view of the research subject.
+
+- 🌳 Tree-like exploration with configurable depth and breadth
+- ⚡️ Concurrent processing for faster results
+- 🤝 Smart context management across research branches
+- ⏱️ Takes ~5 minutes per deep research
+- 💰 Costs ~$0.4 per research (using `o3-mini` on "high" reasoning effort)
+
+[Learn more about Deep Research](https://docs.gptr.dev/docs/gpt-researcher/gptr/deep_research) in our documentation.
 
 ## Run with Docker
 
@@ -177,6 +213,21 @@ export DOC_PATH="./my-docs"
 Step 2: 
  - If you're running the frontend app on localhost:8000, simply select "My Documents" from the "Report Source" Dropdown Options.
  - If you're running GPT Researcher with the [PIP package](https://docs.tavily.com/guides/gpt-researcher/gpt-researcher#pip-package), pass the `report_source` argument as "local" when you instantiate the `GPTResearcher` class [code sample here](https://docs.gptr.dev/docs/gpt-researcher/context/tailored-research).
+
+
+## 🤖 MCP Server
+
+We've moved our MCP server to a dedicated repository: [gptr-mcp](https://github.com/assafelovic/gptr-mcp).
+
+The GPT Researcher MCP Server enables AI applications like Claude to conduct deep research. While LLM apps can access web search tools with MCP, GPT Researcher MCP delivers deeper, more reliable research results.
+
+Features:
+- Deep research capabilities for AI assistants
+- Higher quality information with optimized context usage
+- Comprehensive results with better reasoning for LLMs
+- Claude Desktop integration
+
+For detailed installation and usage instructions, please visit the [official repository](https://github.com/assafelovic/gptr-mcp).
 
 
 ## 👪 Multi-Agent Assistant

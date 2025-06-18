@@ -9,6 +9,7 @@ _SUPPORTED_PROVIDERS = {
     "openai",
     "azure_openai",
     "cohere",
+    "gigachat",
     "google_vertexai",
     "google_genai",
     "fireworks",
@@ -21,6 +22,7 @@ _SUPPORTED_PROVIDERS = {
     "dashscope",
     "custom",
     "bedrock",
+    "aimlapi",
 }
 
 
@@ -72,6 +74,10 @@ class Memory:
                 from langchain_fireworks import FireworksEmbeddings
 
                 _embeddings = FireworksEmbeddings(model=model, **embdding_kwargs)
+            case "gigachat":
+                from langchain_gigachat import GigaChatEmbeddings
+
+                _embeddings = GigaChatEmbeddings(model=model, **embdding_kwargs)
             case "ollama":
                 from langchain_ollama import OllamaEmbeddings
 
@@ -112,6 +118,15 @@ class Memory:
                 from langchain_aws.embeddings import BedrockEmbeddings
 
                 _embeddings = BedrockEmbeddings(model_id=model, **embdding_kwargs)
+            case "aimlapi":
+                from langchain_openai import OpenAIEmbeddings
+
+                _embeddings = OpenAIEmbeddings(
+                    model=model,
+                    openai_api_key=os.getenv("AIMLAPI_API_KEY"),
+                    openai_api_base=os.getenv("AIMLAPI_BASE_URL", "https://api.aimlapi.com/v1"),
+                    **embdding_kwargs,
+                )
             case _:
                 raise Exception("Embedding not found.")
 

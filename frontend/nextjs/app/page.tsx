@@ -27,7 +27,9 @@ export default function Home() {
     report_type: 'research_report', 
     tone: 'Objective',
     domains: [],
-    defaultReportType: 'research_report'
+    defaultReportType: 'research_report',
+    mcp_enabled: false,
+    mcp_configs: []
   });
   const [question, setQuestion] = useState("");
   const [orderedData, setOrderedData] = useState<Data[]>([]);
@@ -78,6 +80,9 @@ export default function Home() {
   };
 
   const handleDisplayResult = async (newQuestion: string) => {
+    console.log('🔍 Starting research with question:', newQuestion);
+    console.log('📋 Current chatBoxSettings:', chatBoxSettings);
+    
     setShowResult(true);
     setLoading(true);
     setQuestion(newQuestion);
@@ -89,24 +94,54 @@ export default function Home() {
     const apiVariables = storedConfig ? JSON.parse(storedConfig) : {};
     const langgraphHostUrl = apiVariables.LANGGRAPH_HOST_URL;
 
-    if (chatBoxSettings.report_type === 'multi_agents' && langgraphHostUrl) {
-      let { streamResponse, host, thread_id } = await startLanggraphResearch(newQuestion, chatBoxSettings.report_source, langgraphHostUrl);
-      const langsmithGuiLink = `https://smith.langchain.com/studio/thread/${thread_id}?baseUrl=${host}`;
-      setOrderedData((prevOrder) => [...prevOrder, { type: 'langgraphButton', link: langsmithGuiLink }]);
+    console.log('🔧 Config check:', {
+      report_type: chatBoxSettings.report_type,
+      langgraphHostUrl: langgraphHostUrl,
+      hasLangGraph: !!langgraphHostUrl
+    });
 
-      let previousChunk = null;
-      for await (const chunk of streamResponse) {
-        if (chunk.data.report != null && chunk.data.report != "Full report content here") {
-          setOrderedData((prevOrder) => [...prevOrder, { ...chunk.data, output: chunk.data.report, type: 'report' }]);
-          setLoading(false);
-        } else if (previousChunk) {
-          const differences = findDifferences(previousChunk, chunk);
-          setOrderedData((prevOrder) => [...prevOrder, { type: 'differences', content: 'differences', output: JSON.stringify(differences) }]);
+    if (chatBoxSettings.report_type === 'multi_agents' && langgraphHostUrl) {
+      console.log('🤖 Using LangGraph multi-agents path');
+      try {
+        let { streamResponse, host, thread_id } = await startLanggraphResearch(newQuestion, chatBoxSettings.report_source, langgraphHostUrl);
+        const langsmithGuiLink = `https://smith.langchain.com/studio/thread/${thread_id}?baseUrl=${host}`;
+        setOrderedData((prevOrder) => [...prevOrder, { type: 'langgraphButton', link: langsmithGuiLink }]);
+
+        let previousChunk = null;
+        for await (const chunk of streamResponse) {
+          if (chunk.data.report != null && chunk.data.report != "Full report content here") {
+            setOrderedData((prevOrder) => [...prevOrder, { ...chunk.data, output: chunk.data.report, type: 'report' }]);
+            setLoading(false);
+          } else if (previousChunk) {
+            const differences = findDifferences(previousChunk, chunk);
+            setOrderedData((prevOrder) => [...prevOrder, { type: 'differences', content: 'differences', output: JSON.stringify(differences) }]);
+          }
+          previousChunk = chunk;
         }
-        previousChunk = chunk;
+      } catch (error) {
+        console.error('❌ LangGraph research failed:', error);
+        setLoading(false);
+        setOrderedData((prevOrder) => [...prevOrder, { 
+          type: 'error', 
+          content: 'LangGraph Error', 
+          output: `Failed to start LangGraph research: ${(error as Error).message}` 
+        }]);
       }
     } else {
-      initializeWebSocket(newQuestion, chatBoxSettings);
+      console.log('🌐 Using WebSocket research path');
+      console.log('📡 Initializing WebSocket with:', { newQuestion, chatBoxSettings });
+      
+      try {
+        initializeWebSocket(newQuestion, chatBoxSettings);
+      } catch (error) {
+        console.error('❌ WebSocket initialization failed:', error);
+        setLoading(false);
+        setOrderedData((prevOrder) => [...prevOrder, { 
+          type: 'error', 
+          content: 'WebSocket Error', 
+          output: `Failed to initialize WebSocket: ${(error as Error).message}` 
+        }]);
+      }
     }
   };
 
@@ -351,7 +386,7 @@ export default function Home() {
       {showScrollButton && showResult && (
         <button
           onClick={scrollToBottom}
-          className="fixed bottom-8 right-8 flex items-center justify-center w-12 h-12 text-white bg-[rgb(168,85,247)] rounded-full hover:bg-[rgb(147,51,234)] transform hover:scale-105 transition-all duration-200 shadow-lg z-50"
+          className="fixed bottom-8 right-8 flex items-center justify-center w-12 h-12 text-white bg-gradient-to-br from-teal-500 to-teal-600 rounded-full hover:from-teal-600 hover:to-teal-700 transform hover:scale-105 transition-all duration-200 shadow-lg z-50 backdrop-blur-sm border border-teal-400/20"
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 

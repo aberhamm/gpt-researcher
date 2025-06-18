@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import FileUpload from "../Settings/FileUpload";
 import ToneSelector from "../Settings/ToneSelector";
+import MCPSelector from "../Settings/MCPSelector";
 import { useAnalytics } from "../../hooks/useAnalytics";
-import { CloseIcon } from '@chakra-ui/icons';
-import { ChatBoxSettings, Domain } from '@/types/data';
+import { ChatBoxSettings, Domain, MCPConfig } from '@/types/data';
 
 interface ResearchFormProps {
   chatBoxSettings: ChatBoxSettings;
@@ -72,6 +72,14 @@ export default function ResearchForm({
     }));
   };
 
+  const onMCPChange = (enabled: boolean, configs: MCPConfig[]) => {
+    setChatBoxSettings((prevSettings: any) => ({
+      ...prevSettings,
+      mcp_enabled: enabled,
+      mcp_configs: configs,
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onFormSubmit) {
@@ -137,6 +145,12 @@ export default function ResearchForm({
       
       <ToneSelector tone={tone} onToneChange={onToneChange} />
 
+      <MCPSelector 
+        mcpEnabled={chatBoxSettings.mcp_enabled}
+        mcpConfigs={chatBoxSettings.mcp_configs}
+        onMCPChange={onMCPChange}
+      />
+
       {/** TODO: move the below to its own component */}
       {(chatBoxSettings.report_source === "web" || chatBoxSettings.report_source === "hybrid") && (
         <div className="mt-4 domain_filters">
@@ -178,7 +192,7 @@ export default function ResearchForm({
                   onClick={() => handleRemoveDomain(domain.value)}
                   className="domain-button-static"
                 >
-                  <CloseIcon className="h-4 w-4" />
+                  X
                 </button>
               </div>
             ))}

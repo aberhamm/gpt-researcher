@@ -75,7 +75,7 @@ class ReportGenerator:
         else:
             report_params["cost_callback"] = self.researcher.add_costs
 
-        report = await generate_report(**report_params)
+        report = await generate_report(**report_params, **self.researcher.kwargs)
 
         if self.researcher.verbose:
             await stream_output(
@@ -112,6 +112,8 @@ class ReportGenerator:
             agent_role_prompt=self.researcher.cfg.agent_role or self.researcher.role,
             cost_callback=self.researcher.add_costs,
             websocket=self.researcher.websocket,
+            prompt_family=self.researcher.prompt_family,
+            **self.researcher.kwargs
         )
 
         if self.researcher.verbose:
@@ -141,6 +143,8 @@ class ReportGenerator:
             config=self.researcher.cfg,
             websocket=self.researcher.websocket,
             cost_callback=self.researcher.add_costs,
+            prompt_family=self.researcher.prompt_family,
+            **self.researcher.kwargs
         )
 
         if self.researcher.verbose:
@@ -168,6 +172,8 @@ class ReportGenerator:
             data=self.researcher.context,
             config=self.researcher.cfg,
             subtopics=self.researcher.subtopics,
+            prompt_family=self.researcher.prompt_family,
+            **self.researcher.kwargs
         )
 
         if self.researcher.verbose:
@@ -198,6 +204,8 @@ class ReportGenerator:
             websocket=self.researcher.websocket,
             config=self.researcher.cfg,
             cost_callback=self.researcher.add_costs,
+            prompt_family=self.researcher.prompt_family,
+            **self.researcher.kwargs
         )
 
         if self.researcher.verbose:

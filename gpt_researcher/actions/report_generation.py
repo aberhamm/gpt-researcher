@@ -3,12 +3,7 @@ from typing import List, Dict, Any
 from ..config.config import Config
 from ..utils.llm import create_chat_completion
 from ..utils.logger import get_formatted_logger
-from ..prompts import (
-    generate_report_introduction,
-    generate_draft_titles_prompt,
-    generate_report_conclusion,
-    get_prompt_by_report_type,
-)
+from ..prompts import PromptFamily, get_prompt_by_report_type
 from ..utils.enum import Tone
 
 logger = get_formatted_logger()
@@ -20,7 +15,9 @@ async def write_report_introduction(
     agent_role_prompt: str,
     config: Config,
     websocket=None,
-    cost_callback: callable = None
+    cost_callback: callable = None,
+    prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
+    **kwargs
 ) -> str:
     """
     Generate an introduction for the report.
@@ -32,6 +29,7 @@ async def write_report_introduction(
         config (Config): Configuration object.
         websocket: WebSocket connection for streaming output.
         cost_callback (callable, optional): Callback for calculating LLM costs.
+        prompt_family: Family of prompts
 
     Returns:
         str: The generated introduction.
@@ -41,7 +39,7 @@ async def write_report_introduction(
             model=config.smart_llm_model,
             messages=[
                 {"role": "system", "content": f"{agent_role_prompt}"},
-                {"role": "user", "content": generate_report_introduction(
+                {"role": "user", "content": prompt_family.generate_report_introduction(
                     question=query,
                     research_summary=context,
                     language=config.language
@@ -54,6 +52,7 @@ async def write_report_introduction(
             max_tokens=config.smart_token_limit,
             llm_kwargs=config.llm_kwargs,
             cost_callback=cost_callback,
+            **kwargs
         )
         return introduction
     except Exception as e:
@@ -67,7 +66,9 @@ async def write_conclusion(
     agent_role_prompt: str,
     config: Config,
     websocket=None,
-    cost_callback: callable = None
+    cost_callback: callable = None,
+    prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
+    **kwargs
 ) -> str:
     """
     Write a conclusion for the report.
@@ -79,6 +80,7 @@ async def write_conclusion(
         config (Config): Configuration object.
         websocket: WebSocket connection for streaming output.
         cost_callback (callable, optional): Callback for calculating LLM costs.
+        prompt_family: Family of prompts
 
     Returns:
         str: The generated conclusion.
@@ -88,9 +90,12 @@ async def write_conclusion(
             model=config.smart_llm_model,
             messages=[
                 {"role": "system", "content": f"{agent_role_prompt}"},
-                {"role": "user", "content": generate_report_conclusion(query=query,
-                                                                       report_content=context,
-                                                                       language=config.language)},
+                {
+                    "role": "user",
+                    "content": prompt_family.generate_report_conclusion(query=query,
+                                                                        report_content=context,
+                                                                        language=config.language),
+                },
             ],
             temperature=0.25,
             llm_provider=config.smart_llm_provider,
@@ -99,6 +104,7 @@ async def write_conclusion(
             max_tokens=config.smart_token_limit,
             llm_kwargs=config.llm_kwargs,
             cost_callback=cost_callback,
+            **kwargs
         )
         return conclusion
     except Exception as e:
@@ -112,7 +118,8 @@ async def summarize_url(
     role: str,
     config: Config,
     websocket=None,
-    cost_callback: callable = None
+    cost_callback: callable = None,
+    **kwargs
 ) -> str:
     """
     Summarize the content of a URL.
@@ -142,6 +149,7 @@ async def summarize_url(
             max_tokens=config.smart_token_limit,
             llm_kwargs=config.llm_kwargs,
             cost_callback=cost_callback,
+            **kwargs
         )
         return summary
     except Exception as e:
@@ -156,7 +164,9 @@ async def generate_draft_section_titles(
     role: str,
     config: Config,
     websocket=None,
-    cost_callback: callable = None
+    cost_callback: callable = None,
+    prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
+    **kwargs
 ) -> List[str]:
     """
     Generate draft section titles for the report.
@@ -168,6 +178,7 @@ async def generate_draft_section_titles(
         config (Config): Configuration object.
         websocket: WebSocket connection for streaming output.
         cost_callback (callable, optional): Callback for calculating LLM costs.
+        prompt_family: Family of prompts
 
     Returns:
         List[str]: A list of generated section titles.
@@ -177,7 +188,7 @@ async def generate_draft_section_titles(
             model=config.smart_llm_model,
             messages=[
                 {"role": "system", "content": f"{role}"},
-                {"role": "user", "content": generate_draft_titles_prompt(
+                {"role": "user", "content": prompt_family.generate_draft_titles_prompt(
                     current_subtopic, query, context)},
             ],
             temperature=0.25,
@@ -187,6 +198,7 @@ async def generate_draft_section_titles(
             max_tokens=config.smart_token_limit,
             llm_kwargs=config.llm_kwargs,
             cost_callback=cost_callback,
+            **kwargs
         )
         return section_titles.split("\n")
     except Exception as e:
@@ -209,6 +221,8 @@ async def generate_report(
     cost_callback: callable = None,
     custom_prompt: str = "", # This can be any prompt the user chooses with the context
     headers=None,
+    prompt_family: type[PromptFamily] | PromptFamily = PromptFamily,
+    **kwargs
 ):
     """
     generates the final report
@@ -224,12 +238,13 @@ async def generate_report(
         existing_headers:
         relevant_written_contents:
         cost_callback:
+        prompt_family: Family of prompts
 
     Returns:
         report:
 
     """
-    generate_prompt = get_prompt_by_report_type(report_type)
+    generate_prompt = get_prompt_by_report_type(report_type, prompt_family)
     report = ""
 
     if report_type == "subtopic_report":
@@ -252,6 +267,7 @@ async def generate_report(
             max_tokens=cfg.smart_token_limit,
             llm_kwargs=cfg.llm_kwargs,
             cost_callback=cost_callback,
+            **kwargs
         )
     except:
         try:
@@ -267,6 +283,7 @@ async def generate_report(
                 max_tokens=cfg.smart_token_limit,
                 llm_kwargs=cfg.llm_kwargs,
                 cost_callback=cost_callback,
+                **kwargs
             )
         except Exception as e:
             print(f"Error in generate_report: {e}")
